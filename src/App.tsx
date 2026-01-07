@@ -20,7 +20,14 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Cloud Sync State
-  const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | undefined>();
+  const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | undefined>({
+    apiKey: "AIzaSyA_g9EAgnwIK-Mg202ELhvUJ2VcuofE7A0",
+    authDomain: "trp-tracker.firebaseapp.com",
+    projectId: "trp-tracker",
+    storageBucket: "trp-tracker.firebasestorage.app",
+    messagingSenderId: "570430767006",
+    appId: "1:570430767006:web:8d88fb08130bd2e125a08f"
+  });
   const [isCloudSetupOpen, setIsCloudSetupOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,13 +38,10 @@ function App() {
     setSettings(getSettings());
     setEntries(getEntries()); // Always load local first
 
-    // Load Firebase Config
-    const storedConfig = localStorage.getItem(FIREBASE_CONFIG_KEY);
-    if (storedConfig) {
-      const config = JSON.parse(storedConfig);
-      setFirebaseConfig(config);
+    // Initialize Firebase with baked-in config
+    if (firebaseConfig) {
       try {
-        initFirebase(config);
+        initFirebase(firebaseConfig);
         const auth = getAuthInstance();
         if (auth) {
           onAuthStateChanged(auth, (u) => {
