@@ -11,13 +11,13 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Health Tracker',
-        short_name: 'Health',
+        name: "Mum's Triage Tracker",
+        short_name: 'Triage',
         description: 'Track and monitor your vital health metrics including blood pressure, glucose levels, oxygen saturation, heart rate, and weight. Export data to Excel and sync across devices with cloud storage.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/TRP/',
         icons: [
           {
             src: 'pwa-192x192.png',
