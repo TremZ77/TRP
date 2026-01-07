@@ -21,12 +21,12 @@ function App() {
 
   // Cloud Sync State
   const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | undefined>({
-    apiKey: "AIzaSyA_g9EAgnwIK-Mg202ELhvUJ2VcuofE7A0",
-    authDomain: "trp-tracker.firebaseapp.com",
-    projectId: "trp-tracker",
-    storageBucket: "trp-tracker.firebasestorage.app",
-    messagingSenderId: "570430767006",
-    appId: "1:570430767006:web:8d88fb08130bd2e125a08f"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
   });
   const [isCloudSetupOpen, setIsCloudSetupOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
