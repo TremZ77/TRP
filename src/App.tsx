@@ -20,14 +20,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Cloud Sync State
-  const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | undefined>({
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
-  });
+  const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | undefined>();
   const [isCloudSetupOpen, setIsCloudSetupOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +31,22 @@ function App() {
     setSettings(getSettings());
     setEntries(getEntries()); // Always load local first
 
-    // Initialize Firebase with baked-in config
-    if (firebaseConfig) {
+    // Initialize Firebase with baked-in config (from environment variables)
+    const config: FirebaseConfig = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.replace(/"/g, '').trim(),
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.replace(/"/g, '').trim(),
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.replace(/"/g, '').trim(),
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.replace(/"/g, '').trim(),
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.replace(/"/g, '').trim(),
+      appId: import.meta.env.VITE_FIREBASE_APP_ID?.replace(/"/g, '').trim()
+    };
+
+    if (config.apiKey && config.projectId) {
       try {
-        initFirebase(firebaseConfig);
+        console.log("Initializing Firebase with environment variables...");
+        initFirebase(config);
+        setFirebaseConfig(config);
+
         const auth = getAuthInstance();
         if (auth) {
           onAuthStateChanged(auth, (u) => {
@@ -50,8 +55,14 @@ function App() {
           });
         }
       } catch (e) {
-        console.error("Firebase Init Error", e);
+        console.error("Firebase Initialization Failed:", e);
       }
+    } else {
+      console.warn("Firebase configuration is missing! Check your GitHub Secrets.");
+      console.log("Config State:", {
+        hasApiKey: !!config.apiKey,
+        hasProjectId: !!config.projectId
+      });
     }
   }, []);
 
