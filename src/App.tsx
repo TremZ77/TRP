@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { HealthEntry, HealthEntryInput, AppSettings, FirebaseConfig } from './types';
-import { getEntries, saveEntry } from './lib/storage';
+import { getEntries, saveEntry, updateEntry } from './lib/storage';
 import { getSettings, saveSettings, DEFAULT_SETTINGS } from './lib/settings';
 import { exportToExcel } from './lib/excelExport';
 import { HealthForm } from './components/HealthForm';
@@ -9,7 +9,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { CloudSetupModal } from './components/CloudSetupModal';
 import { AuthButton } from './components/AuthButton';
 import { Settings as SettingsIcon } from 'lucide-react';
-import { initFirebase, signInWithGoogle, logout, getAuthInstance, saveCloudEntry, getCloudEntries } from './lib/firebase';
+import { initFirebase, signInWithGoogle, logout, getAuthInstance, saveCloudEntry, getCloudEntries, updateCloudEntry } from './lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 const FIREBASE_CONFIG_KEY = 'health_tracker_firebase_config';
@@ -24,6 +24,7 @@ function App() {
   const [isCloudSetupOpen, setIsCloudSetupOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<HealthEntry | null>(null);
 
   // Initialize
   useEffect(() => {
@@ -84,24 +85,53 @@ function App() {
   };
 
   const handleSaveEntry = async (input: HealthEntryInput) => {
-    // 1. Save Local (always backup)
-    const localEntry = saveEntry(input);
+    setIsLoading(true);
+    try {
+      if (editingEntry) {
+        // Update existing
+        const updatedEntry: HealthEntry = {
+          ...input,
+          id: editingEntry.id,
+          timestamp: editingEntry.timestamp
+        };
 
-    // 2. Save Cloud (if logged in)
-    if (user) {
-      try {
-        const cloudEntry = await saveCloudEntry(user.uid, input);
-        // Replace local ID with cloud ID/Entry in UI
-        setEntries(prev => [cloudEntry, ...prev]);
-      } catch (e) {
-        console.error("Save Cloud Error", e);
-        // Fallback to showing local entry
-        setEntries(prev => [localEntry, ...prev]);
+        // 1. Update Local
+        updateEntry(updatedEntry);
+
+        // 2. Update Cloud
+        if (user) {
+          await updateCloudEntry(user.uid, updatedEntry);
+        }
+
+        // 3. Update State
+        setEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e));
+        setEditingEntry(null);
+      } else {
+        // Create new
+        const localEntry = saveEntry(input);
+
+        if (user) {
+          const cloudEntry = await saveCloudEntry(user.uid, input);
+          setEntries(prev => [cloudEntry, ...prev]);
+        } else {
+          setEntries(prev => [localEntry, ...prev]);
+        }
       }
-    } else {
-      setEntries(prev => [localEntry, ...prev]);
+    } catch (e) {
+      console.error("Save Error", e);
+      alert("Failed to save entry. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleDeleteEntry = (id: string) => {
+    // For now just local delete logic as it was before
+    const updatedEntries = entries.filter(e => e.id !== id);
+    setEntries(updatedEntries);
+    localStorage.setItem('health_tracker_data', JSON.stringify(updatedEntries));
+  };
+
 
   const handleExport = () => {
     exportToExcel(entries);
@@ -188,8 +218,17 @@ function App() {
         {isLoading && (
           <div className="text-center py-4 text-blue-600 animate-pulse">Syncing data...</div>
         )}
-        <HealthForm onSave={handleSaveEntry} />
-        <Dashboard entries={entries} onExport={handleExport} />
+        <HealthForm
+          onSave={handleSaveEntry}
+          initialData={editingEntry}
+          onCancel={() => setEditingEntry(null)}
+        />
+        <Dashboard
+          entries={entries}
+          onExport={handleExport}
+          onDelete={handleDeleteEntry}
+          onEdit={setEditingEntry}
+        />
       </main>
 
       <SettingsModal

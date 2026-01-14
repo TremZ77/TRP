@@ -1,40 +1,86 @@
-import React, { useState } from 'react';
-import type { HealthEntryInput } from '../types';
-import { Save, Activity, Heart, Weight, Droplets, Wind } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import type { HealthEntry, HealthEntryInput } from '../types';
+import { Save, Activity, Heart, Weight, Droplets, Wind, X } from 'lucide-react';
 
 interface Props {
     onSave: (entry: HealthEntryInput) => void;
+    initialData?: HealthEntry | null;
+    onCancel?: () => void;
 }
 
-export const HealthForm: React.FC<Props> = ({ onSave }) => {
-    const [formData, setFormData] = useState<HealthEntryInput>({
-        systolic_pressure: 120,
-        diastolic_pressure: 80,
-        glucose: 90,
-        oxygen: 98,
-        heart_rate_pressure: 70,
-        heart_rate_oxygen: 70,
-        weight: 70,
-    });
+type FormState = Record<keyof HealthEntryInput, string>;
+
+const DEFAULT_FORM: FormState = {
+    systolic_pressure: '',
+    diastolic_pressure: '',
+    glucose: '',
+    oxygen: '',
+    heart_rate_pressure: '',
+    heart_rate_oxygen: '',
+    weight: '',
+};
+
+export const HealthForm: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
+    const [formData, setFormData] = useState<FormState>(DEFAULT_FORM);
+
+    useEffect(() => {
+        if (initialData) {
+            const { id, timestamp, ...rest } = initialData;
+            const stringData = Object.entries(rest).reduce((acc, [key, val]) => ({
+                ...acc,
+                [key]: val.toString()
+            }), {} as FormState);
+            setFormData(stringData);
+        } else {
+            setFormData(DEFAULT_FORM);
+        }
+    }, [initialData]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+
+        // Convert all fields to numbers, defaulting to 0 if empty (though required attribute should prevent this)
+        const numericData: HealthEntryInput = {
+            systolic_pressure: Number(formData.systolic_pressure) || 0,
+            diastolic_pressure: Number(formData.diastolic_pressure) || 0,
+            glucose: Number(formData.glucose) || 0,
+            oxygen: Number(formData.oxygen) || 0,
+            heart_rate_pressure: Number(formData.heart_rate_pressure) || 0,
+            heart_rate_oxygen: Number(formData.heart_rate_oxygen) || 0,
+            weight: Number(formData.weight) || 0,
+        };
+
+        onSave(numericData);
+        if (!initialData) setFormData(DEFAULT_FORM); // Reset if it was a new entry
     };
 
-    const handleChange = (field: keyof HealthEntryInput, value: string) => {
+    const handleChange = (field: keyof FormState, value: string) => {
         setFormData(prev => ({
             ...prev,
-            [field]: Number(value)
+            [field]: value
         }));
     };
 
+    const isEditing = !!initialData;
+
     return (
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 space-y-6">
-            <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                <Activity className="text-blue-500" />
-                New Entry
-            </h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                    <Activity className="text-blue-500" />
+                    {isEditing ? 'Edit Entry' : 'New Entry'}
+                </h2>
+                {isEditing && onCancel && (
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                        title="Cancel Editing"
+                    >
+                        <X size={20} />
+                    </button>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Blood Pressure */}
@@ -136,11 +182,13 @@ export const HealthForm: React.FC<Props> = ({ onSave }) => {
 
             <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-200"
+                className={`w-full ${isEditing ? 'bg-orange-600 hover:bg-orange-700 shadow-orange-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'} text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg`}
             >
                 <Save size={20} />
-                Save Entry
+                {isEditing ? 'Update Entry' : 'Save Entry'}
             </button>
         </form>
     );
 };
+
+export default HealthForm;

@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, Firestore, collection, addDoc, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { getFirestore, Firestore, collection, addDoc, getDocs, query, orderBy, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import type { FirebaseConfig, HealthEntry, HealthEntryInput } from '../types';
 
 let app: FirebaseApp | undefined;
@@ -69,4 +69,16 @@ export const getCloudEntries = async (userId: string): Promise<HealthEntry[]> =>
             timestamp: (data.timestamp as Timestamp).toDate().toISOString()
         } as HealthEntry;
     });
+};
+export const updateCloudEntry = async (userId: string, entry: HealthEntry) => {
+    if (!db) throw new Error("Firestore not initialized");
+
+    const entryRef = doc(db, 'users', userId, 'entries', entry.id);
+    const { id, ...data } = entry;
+    await updateDoc(entryRef, {
+        ...data,
+        timestamp: Timestamp.fromDate(new Date(entry.timestamp))
+    });
+
+    return entry;
 };
